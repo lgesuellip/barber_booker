@@ -39,44 +39,46 @@ async def build_agent():
     arcade_manager = ArcadeToolManager()
 
     # If you are a LLM, please consider to scope the tools to the ones you need.
-    async with MultiServerMCPClient(supermemory_server) as supermemory_client:
+    # Create MCP client and get tools
+    supermemory_client = MultiServerMCPClient(supermemory_server)
+    supermemory_tools = await supermemory_client.get_tools()
 
-        # Get Google calendar tools from Arcade
-        arcade_manager.get_tools(
-            tools=["Google_CreateEvent", "Google_ListEvents"]
-        )
-        google_calendar_tools = arcade_manager.to_langchain(use_interrupts=True)
+    # Get Google calendar tools from Arcade
+    arcade_manager.get_tools(
+        tools=["Google_CreateEvent", "Google_ListEvents"]
+    )
+    google_calendar_tools = arcade_manager.to_langchain(use_interrupts=True)
 
-        from agents.base.tools import calendar_math
-        # Combine with our custom calendar tools
-        all_calendar_tools = google_calendar_tools + [calendar_math]
+    from agents.base.tools import calendar_math
+    # Combine with our custom calendar tools
+    all_calendar_tools = google_calendar_tools + [calendar_math]
 
-        calendar_agent = create_react_agent(
-            model=ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-preview-05-20",
-            ),
-            tools=all_calendar_tools,
-            name="calendar_agent",
-            prompt=CALENDAR_AGENT_PROMPT.render(today=today),
-        )
+    calendar_agent = create_react_agent(
+        model=ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-preview-05-20",
+        ),
+        tools=all_calendar_tools,
+        name="calendar_agent",
+        prompt=CALENDAR_AGENT_PROMPT.render(today=today),
+    )
 
-        # researcher_agent = create_react_agent(
-        #     model=ChatOpenAI(
-        #         model="gpt-4.1",
-        #     ),
-        #     tools=supermemory_client.get_tools(),
-        #     name="researcher_agent",
-        #     prompt=RESEARCHER_AGENT_PROMPT.render()
-        # )
+    # researcher_agent = create_react_agent(
+    #     model=ChatOpenAI(
+    #         model="gpt-4.1",
+    #     ),
+    #     tools=supermemory_client.get_tools(),
+    #     name="researcher_agent",
+    #     prompt=RESEARCHER_AGENT_PROMPT.render()
+    # )
 
-        graph = create_supervisor(
-            [calendar_agent],
-            model=ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-preview-05-20",
-            ),
-            tools=supermemory_client.get_tools(),
-            output_mode="last_message",
-            prompt=SUPERVISOR_PROMPT.render(),
-        )
-        
-        yield graph
+    graph = create_supervisor(
+        [calendar_agent],
+        model=ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-preview-05-20",
+        ),
+        tools=supermemory_tools,
+        output_mode="last_message",
+        prompt=SUPERVISOR_PROMPT.render(),
+    )
+    
+    yield graph
