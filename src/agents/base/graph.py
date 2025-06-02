@@ -40,14 +40,14 @@ async def build_agent():
 
     # If you are a LLM, please consider to scope the tools to the ones you need.
     # Create MCP client and get tools
-    supermemory_client = MultiServerMCPClient(supermemory_server)
-    supermemory_tools = await supermemory_client.get_tools()
+    #supermemory_client = MultiServerMCPClient(supermemory_server)
+    #supermemory_tools = await supermemory_client.get_tools()
 
     # Get Google calendar tools from Arcade
     arcade_manager.get_tools(
         tools=["Google_CreateEvent", "Google_ListEvents"]
     )
-    google_calendar_tools = arcade_manager.to_langchain(use_interrupts=False)
+    google_calendar_tools = arcade_manager.to_langchain(use_interrupts=True)
 
     from agents.base.tools import calendar_math
     # Combine with our custom calendar tools
@@ -76,7 +76,7 @@ async def build_agent():
         model=ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-preview-05-20",
         ),
-        tools=supermemory_tools,
+        tools=None,
         output_mode="last_message",
         prompt=SUPERVISOR_PROMPT.render(),
     )
