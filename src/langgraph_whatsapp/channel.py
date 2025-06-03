@@ -138,7 +138,8 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         ``body`` may be a plain string or a dictionary containing ``text`` and a
         ``button`` with a ``url``. In the latter case we use Twilio's
         ``persistent_action`` field so the link appears as a tappable button in
-        WhatsApp.
+        WhatsApp. Set ``include_url`` inside the ``button`` dictionary to
+        ``True`` if the raw URL should also be appended to the message text.
         """
 
         if not TWILIO_PHONE_NUMBER:
@@ -154,9 +155,8 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             button = body.get("button", {})
             if isinstance(button, dict) and button.get("url"):
                 params["persistent_action"] = [button["url"]]
-                # Include the link in the body text so users can open it even
-                # if WhatsApp fails to render the button
-                if button["url"] not in text:
+                include_url = button.get("include_url", False)
+                if include_url and button["url"] not in text:
                     text = f"{text}\n{button['url']}"
             params["body"] = text
         else:
