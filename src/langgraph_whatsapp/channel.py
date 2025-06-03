@@ -28,10 +28,10 @@ def twilio_url_to_data_uri(url: str, content_type: str = None) -> str:
     resp.raise_for_status()
 
     # Use provided content_type or get from headers
-    mime = content_type or resp.headers.get('Content-Type')
+    mime = content_type or resp.headers.get("Content-Type")
 
     # Ensure we have a proper image mime type
-    if not mime or not mime.startswith('image/'):
+    if not mime or not mime.startswith("image/"):
         LOGGER.warning(f"Converting non-image MIME type '{mime}' to 'image/jpeg'")
         mime = "image/jpeg"  # Default to jpeg if not an image type
 
@@ -40,6 +40,7 @@ def twilio_url_to_data_uri(url: str, content_type: str = None) -> str:
 
     return data_uri
 
+
 class WhatsAppAgent(ABC):
     @abstractmethod
     async def handle_message(self, request: Request) -> str:
@@ -47,9 +48,10 @@ class WhatsAppAgent(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def process_form(self, form: dict) -> str:
+    async def process_form(self, form: dict) -> str | dict:
         """Process a parsed Twilio form payload and return text reply"""
         raise NotImplementedError
+
 
 class WhatsAppAgentTwilio(WhatsAppAgent):
     def __init__(self) -> None:
@@ -66,7 +68,7 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         twiml.message(message_text)
         return str(twiml)
 
-    async def process_form(self, form: dict) -> str:
+    async def process_form(self, form: dict) -> str | dict:
         sender = form.get("From", "").strip()
         content = form.get("Body", "").strip()
         if not sender:
@@ -78,10 +80,12 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             ctype = form.get(f"MediaContentType{i}", "")
             if url and ctype.startswith("image/"):
                 try:
-                    images.append({
-                        "url": url,
-                        "data_uri": twilio_url_to_data_uri(url, ctype),
-                    })
+                    images.append(
+                        {
+                            "url": url,
+                            "data_uri": twilio_url_to_data_uri(url, ctype),
+                        }
+                    )
                 except Exception as err:
                     LOGGER.error("Failed to download %s: %s", url, err)
 
@@ -98,16 +102,42 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
 
         return self._format_reply(reply)
 
-    def _format_reply(self, reply) -> str:
+    def _format_reply(self, reply):
+        """Normalize assistant responses for WhatsApp delivery.
+
+        If the assistant returns a dictionary with a ``button`` field, keep the
+        structure intact so ``send_whatsapp_message`` can generate a WhatsApp
+        button using Twilio's ``persistent_action`` parameter. Otherwise convert
+        the reply to a plain string.
+        """
+
         if isinstance(reply, dict) and "text" in reply and "button" in reply:
-            return f"{reply['text']}\n\n{reply['button']['text']}: {reply['button']['url']}"
+            return reply
         return str(reply)
 
-    def send_whatsapp_message(self, to: str, body: str) -> None:
+    def send_whatsapp_message(self, to: str, body: str | dict) -> None:
+        """Send a WhatsApp message via Twilio.
+
+        ``body`` may be a plain string or a dictionary containing ``text`` and a
+        ``button`` with a ``url``. In the latter case we use Twilio's
+        ``persistent_action`` field so the link appears as a tappable button in
+        WhatsApp.
+        """
+
         if not TWILIO_PHONE_NUMBER:
             raise RuntimeError("TWILIO_PHONE_NUMBER not configured")
-        self.twilio_client.messages.create(
-            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
-            to=to,
-            body=body,
-        )
+
+        params = {
+            "from_": f"whatsapp:{TWILIO_PHONE_NUMBER}",
+            "to": to,
+        }
+
+        if isinstance(body, dict):
+            params["body"] = body.get("text", "")
+            button = body.get("button", {})
+            if isinstance(button, dict) and button.get("url"):
+                params["persistent_action"] = [button["url"]]
+        else:
+            params["body"] = body
+
+        self.twilio_client.messages.create(**params)
