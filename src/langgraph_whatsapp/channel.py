@@ -150,10 +150,15 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         }
 
         if isinstance(body, dict):
-            params["body"] = body.get("text", "")
+            text = body.get("text", "")
             button = body.get("button", {})
             if isinstance(button, dict) and button.get("url"):
                 params["persistent_action"] = [button["url"]]
+                # Include the link in the body text so users can open it even
+                # if WhatsApp fails to render the button
+                if button["url"] not in text:
+                    text = f"{text}\n{button['url']}"
+            params["body"] = text
         else:
             params["body"] = body
 
