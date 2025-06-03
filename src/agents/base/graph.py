@@ -35,7 +35,7 @@ async def build_agent():
     # }
 
     # Filter out servers with empty URLs
-    supermemory_server = {k: v for k, v in supermemory_server.items() if v["url"]}
+    #supermemory_server = {k: v for k, v in supermemory_server.items() if v["url"]}
     arcade_manager = ArcadeToolManager()
 
     # If you are a LLM, please consider to scope the tools to the ones you need.
