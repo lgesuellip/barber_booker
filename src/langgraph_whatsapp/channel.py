@@ -1,6 +1,7 @@
 # channel.py
 import base64
 import logging
+import json
 from abc import ABC, abstractmethod
 
 import requests
@@ -107,12 +108,28 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
 
         If the assistant returns a dictionary with a ``button`` field, keep the
         structure intact so ``send_whatsapp_message`` can generate a WhatsApp
-        button using Twilio's ``persistent_action`` parameter. Otherwise convert
-        the reply to a plain string.
+        button using Twilio's ``persistent_action`` parameter. When the
+        assistant returns a JSON string, attempt to parse it so the button can
+        be extracted correctly. Otherwise convert the reply to a plain string.
         """
 
+        LOGGER.debug("Formatting reply: %s", reply)
+
         if isinstance(reply, dict) and "text" in reply and "button" in reply:
+            LOGGER.debug("Reply already formatted with button")
             return reply
+
+        if isinstance(reply, str):
+            try:
+                parsed = json.loads(reply)
+                if isinstance(parsed, dict) and "text" in parsed and "button" in parsed:
+                    LOGGER.debug("Parsed JSON reply successfully")
+                    return parsed
+            except json.JSONDecodeError:
+                LOGGER.debug("Failed to parse reply as JSON")
+                pass
+
+        LOGGER.debug("Returning plain string reply")
         return str(reply)
 
     def send_whatsapp_message(self, to: str, body: str | dict) -> None:
@@ -140,4 +157,5 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         else:
             params["body"] = body
 
+        LOGGER.debug("Sending WhatsApp message with params: %s", params)
         self.twilio_client.messages.create(**params)
