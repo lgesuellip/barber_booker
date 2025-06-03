@@ -79,5 +79,15 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         reply = await self.agent.invoke(**input_data)
 
         twiml = MessagingResponse()
-        twiml.message(reply)
+        
+        # Check if reply is a dict with button information
+        if isinstance(reply, dict) and "text" in reply and "button" in reply:
+            # For WhatsApp interactive messages with buttons, we need to format the message
+            # with the button as a link in the text
+            message_text = f"{reply['text']}\n\n{reply['button']['text']}: {reply['button']['url']}"
+            twiml.message(message_text)
+        else:
+            # Regular text message
+            twiml.message(reply)
+        
         return str(twiml)
