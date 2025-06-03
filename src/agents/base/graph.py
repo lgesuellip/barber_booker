@@ -27,12 +27,12 @@ async def build_agent():
     # }
 
 
-    supermemory_server = {
-        "supermemory": {
-            "url": os.getenv("SUPERMEMORY_URL_MCP"),
-            "transport": "sse"
-        }
-    }
+    # supermemory_server = {
+    #     "supermemory": {
+    #         "url": os.getenv("SUPERMEMORY_URL_MCP"),
+    #         "transport": "sse"
+    #     }
+    # }
 
     # Filter out servers with empty URLs
     supermemory_server = {k: v for k, v in supermemory_server.items() if v["url"]}
