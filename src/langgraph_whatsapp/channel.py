@@ -1,12 +1,19 @@
 # channel.py
-import base64, logging, requests
+import base64
+import logging
 from abc import ABC, abstractmethod
 
+import requests
 from fastapi import Request, HTTPException
+from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
 
 from src.langgraph_whatsapp.agent import Agent
-from src.langgraph_whatsapp.config import TWILIO_AUTH_TOKEN, TWILIO_ACCOUNT_SID
+from src.langgraph_whatsapp.config import (
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_PHONE_NUMBER,
+)
 
 LOGGER = logging.getLogger("whatsapp")
 
@@ -35,26 +42,39 @@ def twilio_url_to_data_uri(url: str, content_type: str = None) -> str:
 
 class WhatsAppAgent(ABC):
     @abstractmethod
-    async def handle_message(self, request: Request) -> str: ...
+    async def handle_message(self, request: Request) -> str:
+        """Handle an incoming FastAPI request and return TwiML XML"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def process_form(self, form: dict) -> str:
+        """Process a parsed Twilio form payload and return text reply"""
+        raise NotImplementedError
 
 class WhatsAppAgentTwilio(WhatsAppAgent):
     def __init__(self) -> None:
         if not (TWILIO_AUTH_TOKEN and TWILIO_ACCOUNT_SID):
             raise ValueError("Twilio credentials are not configured")
         self.agent = Agent()
+        self.twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
     async def handle_message(self, request: Request) -> str:
         form = await request.form()
+        message_text = await self.process_form(form)
 
-        sender  = form.get("From", "").strip()
+        twiml = MessagingResponse()
+        twiml.message(message_text)
+        return str(twiml)
+
+    async def process_form(self, form: dict) -> str:
+        sender = form.get("From", "").strip()
         content = form.get("Body", "").strip()
         if not sender:
             raise HTTPException(400, detail="Missing 'From' in request form")
 
-        # Collect ALL images (you'll forward only the first one for now)
         images = []
         for i in range(int(form.get("NumMedia", "0"))):
-            url   = form.get(f"MediaUrl{i}", "")
+            url = form.get(f"MediaUrl{i}", "")
             ctype = form.get(f"MediaContentType{i}", "")
             if url and ctype.startswith("image/"):
                 try:
@@ -65,29 +85,29 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                 except Exception as err:
                     LOGGER.error("Failed to download %s: %s", url, err)
 
-        # Assemble payload for the LangGraph agent
         input_data = {
             "id": sender,
             "user_message": content,
         }
         if images:
-            # Pass all images to the agent
             input_data["images"] = [
                 {"image_url": {"url": img["data_uri"]}} for img in images
             ]
 
         reply = await self.agent.invoke(**input_data)
 
-        twiml = MessagingResponse()
-        
-        # Check if reply is a dict with button information
+        return self._format_reply(reply)
+
+    def _format_reply(self, reply) -> str:
         if isinstance(reply, dict) and "text" in reply and "button" in reply:
-            # For WhatsApp interactive messages with buttons, we need to format the message
-            # with the button as a link in the text
-            message_text = f"{reply['text']}\n\n{reply['button']['text']}: {reply['button']['url']}"
-            twiml.message(message_text)
-        else:
-            # Regular text message
-            twiml.message(reply)
-        
-        return str(twiml)
+            return f"{reply['text']}\n\n{reply['button']['text']}: {reply['button']['url']}"
+        return str(reply)
+
+    def send_whatsapp_message(self, to: str, body: str) -> None:
+        if not TWILIO_PHONE_NUMBER:
+            raise RuntimeError("TWILIO_PHONE_NUMBER not configured")
+        self.twilio_client.messages.create(
+            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+            to=to,
+            body=body,
+        )

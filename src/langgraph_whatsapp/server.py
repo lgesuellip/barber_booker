@@ -2,12 +2,13 @@
 import logging
 from urllib.parse import parse_qs
 
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Message
 from twilio.request_validator import RequestValidator
 
 from src.langgraph_whatsapp.channel import WhatsAppAgentTwilio
+from twilio.twiml.messaging_response import MessagingResponse
 from src.langgraph_whatsapp.config import TWILIO_AUTH_TOKEN
 
 LOGGER = logging.getLogger("server")
@@ -53,10 +54,19 @@ APP.add_middleware(TwilioMiddleware, path="/whatsapp")
 
 
 @APP.post("/whatsapp")
-async def whatsapp_reply_twilio(request: Request):
+async def whatsapp_reply_twilio(request: Request, background_tasks: BackgroundTasks):
     try:
-        xml = await WSP_AGENT.handle_message(request)
-        return Response(content=xml, media_type="application/xml")
+        form = await request.form()
+
+        async def _process():
+            message = await WSP_AGENT.process_form(form)
+            WSP_AGENT.send_whatsapp_message(form.get("From", "").strip(), message)
+
+        background_tasks.add_task(_process)
+
+        resp = MessagingResponse()
+        resp.message("Processing your request. You will receive a reply shortly.")
+        return Response(content=str(resp), media_type="application/xml")
     except HTTPException as e:
         LOGGER.error("Handled error: %s", e.detail)
         raise
