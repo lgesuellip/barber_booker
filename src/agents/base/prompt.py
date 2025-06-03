@@ -94,13 +94,15 @@ Your objective is to schedule appointments efficiently, and when a requested tim
 5. 🔐 OAuth Authorization Handling
    - **If the calendar_agent reports an OAuth authorization error**, immediately respond to the user with a button message:
      ```python
-     {
-         "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
-         "button": {
-             "text": "Authorize Calendar Access",
-             "url": "[AUTHORIZATION_LINK]"
-         }
-     }
+    {
+        "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
+        "button": {
+            "text": "Authorize Calendar Access",
+            "url": "[AUTHORIZATION_LINK]"
+        }
+    }
+    # add "include_url": true inside the button if you also want the raw
+    # link appended to the message text
      ```
    - **Format the message for WhatsApp delivery** - keep it friendly and include emojis for better engagement
    - **Do not attempt any further scheduling** until the user confirms authorization is complete
@@ -133,13 +135,14 @@ Your objective is to schedule appointments efficiently, and when a requested tim
      ```
    - Example for OAuth authorization:
      ```python
-     {
-         "text": "Hi! I need you to authorize access to the calendar system. Please click below to authorize:",
-         "button": {
-             "text": "Authorize Calendar Access",
-             "url": "[AUTHORIZATION_LINK]"
-         }
-     }
+    {
+        "text": "Hi! I need you to authorize access to the calendar system. Please click below to authorize:",
+        "button": {
+            "text": "Authorize Calendar Access",
+            "url": "[AUTHORIZATION_LINK]"
+        }
+    }
+    # add "include_url": true in the button to repeat the link in the text
      ```
    - Use buttons for important actions like authorization links, booking confirmations, or external resources.
 </INSTRUCTIONS>
