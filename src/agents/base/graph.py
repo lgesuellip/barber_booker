@@ -47,7 +47,7 @@ async def build_agent():
     arcade_manager.get_tools(
         tools=["Google_CreateEvent", "Google_ListEvents"]
     )
-    google_calendar_tools = arcade_manager.to_langchain(use_interrupts=True)
+    google_calendar_tools = arcade_manager.to_langchain(use_interrupts=False)
 
     from agents.base.tools import calendar_math
     # Combine with our custom calendar tools

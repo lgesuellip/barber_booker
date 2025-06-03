@@ -64,7 +64,7 @@ class Agent:
                 "metadata": {"event": "api_call"},
                 "multitask_strategy": "interrupt",
                 "if_not_exists": "create",
-                "stream_mode": "messages",
+                "stream_mode": "values",
             }
             
             final_response = None
