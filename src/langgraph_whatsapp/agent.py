@@ -60,7 +60,9 @@ class Agent:
                         }
                     ]
                 },
-                "config": self.graph_config,
+                "config":{
+                    "user_id": config.ARCADE_USER_ID,
+                },
                 "metadata": {"event": "api_call"},
                 "multitask_strategy": "interrupt",
                 "if_not_exists": "create",

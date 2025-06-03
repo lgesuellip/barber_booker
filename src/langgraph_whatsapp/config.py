@@ -8,3 +8,4 @@ ASSISTANT_ID = environ.get("LANGGRAPH_ASSISTANT_ID", "agent")
 CONFIG = environ.get("CONFIG") or "{}"
 TWILIO_AUTH_TOKEN = environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_ACCOUNT_SID = environ.get("TWILIO_ACCOUNT_SID")
+ARCADE_USER_ID = environ.get("ARCADE_USER_ID")
