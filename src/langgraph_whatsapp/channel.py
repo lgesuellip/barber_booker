@@ -164,32 +164,14 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             text = body.get("text", "")
             button = body.get("button", {})
             if isinstance(button, dict) and button.get("url"):
-                if button.get("use_carousel"):
-                    self._send_carousel_message(
-                        to=to,
-                        text=text,
-                        url=button["url"],
-                        button_text=button.get("text", "Open Link"),
-                    )
-                    return
-                if button.get("use_template"):
-                    self._send_template_message(
-                        to=to,
-                        content_variables={"1": "barber"}  # Using template variable
-                    )
-                    return
-                if button.get("use_cta"):
-                    self._send_call_to_action(
-                        to=to,
-                        text=text,
-                        url=button["url"],
-                        title=button.get("text", "Open"),
-                    )
-                    return
-                params["persistent_action"] = [button["url"]]
-                include_url = button.get("include_url", False)
-                if include_url and button["url"] not in text:
-                    text = f"{text}\n{button['url']}"
+                # Always use carousel for buttons
+                self._send_carousel_message(
+                    to=to,
+                    text=text,
+                    url=button["url"],
+                    button_text=button.get("text", "Open Link"),
+                )
+                return
             params["body"] = text
         else:
             params["body"] = body
@@ -197,66 +179,6 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         LOGGER.debug("Sending WhatsApp message with params: %s", params)
         self.twilio_client.messages.create(**params)
 
-    def _send_call_to_action(self, to: str, text: str, url: str, title: str) -> None:
-        """Send a WhatsApp Call-To-Action message via Twilio Content API."""
-
-        action = self.twilio_client.content.v1.contents.CallToActionAction(
-            {
-                "type": "URL",
-                "title": title,
-                "url": url,
-            }
-        )
-
-        twilio_cta = self.twilio_client.content.v1.contents.TwilioCallToAction(
-            {
-                "body": text,
-                "actions": [action],
-            }
-        )
-
-        types = self.twilio_client.content.v1.contents.Types(
-            {"twilio_call_to_action": twilio_cta}
-        )
-
-        request = self.twilio_client.content.v1.contents.ContentCreateRequest(
-            {
-                "friendly_name": "cta_auth",  # ephemeral template
-                "language": "en",
-                "types": types,
-            }
-        )
-
-        LOGGER.debug("Creating Twilio CTA template: %s", request.to_dict())
-        content = self.twilio_client.content.v1.contents.create(request)
-
-        LOGGER.debug("Sending message with content SID: %s", content.sid)
-        self.twilio_client.messages.create(
-            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
-            to=to,
-            content_sid=content.sid,
-        )
-
-    def _send_template_message(self, to: str, content_variables: dict = None) -> None:
-        """Send a WhatsApp message using a pre-approved template."""
-        
-        if not TWILIO_TEMPLATE_SID:
-            raise RuntimeError("TWILIO_TEMPLATE_SID not configured")
-        
-        if not TWILIO_MESSAGING_SERVICE_SID:
-            raise RuntimeError("TWILIO_MESSAGING_SERVICE_SID not configured")
-        
-        params = {
-            "messaging_service_sid": TWILIO_MESSAGING_SERVICE_SID,
-            "to": to,
-            "content_sid": TWILIO_TEMPLATE_SID,
-        }
-        
-        if content_variables:
-            params["content_variables"] = json.dumps(content_variables)
-        
-        LOGGER.debug("Sending WhatsApp template message with params: %s", params)
-        self.twilio_client.messages.create(**params)
 
     def _send_carousel_message(self, to: str, text: str, url: str, button_text: str) -> None:
         """Send a WhatsApp carousel message with an interactive button."""

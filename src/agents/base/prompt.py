@@ -98,12 +98,9 @@ Your objective is to schedule appointments efficiently, and when a requested tim
         "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
         "button": {
             "text": "Authorize Access",
-            "url": "[AUTHORIZATION_LINK]",
-            "use_carousel": true
+            "url": "[AUTHORIZATION_LINK]"
         }
     }
-    # add "include_url": true inside the button if you also want the raw
-    # link appended to the message text
      ```
    - **Format the message for WhatsApp delivery** - keep it friendly and include emojis for better engagement
    - **Do not attempt any further scheduling** until the user confirms authorization is complete
@@ -130,8 +127,7 @@ Your objective is to schedule appointments efficiently, and when a requested tim
          "text": "Your message here",
          "button": {
              "text": "Button Text",
-             "url": "https://your-link.com",
-             "use_carousel": true
+             "url": "https://your-link.com"
          }
      }
      ```
@@ -143,11 +139,9 @@ Your objective is to schedule appointments efficiently, and when a requested tim
         "text": "Hi! I need you to authorize access to the calendar system. Please click below to authorize:",
         "button": {
             "text": "Authorize Access",
-            "url": "[AUTHORIZATION_LINK]",
-            "use_cta": true
+            "url": "[AUTHORIZATION_LINK]"
         }
     }
-    # add "include_url": true in the button to repeat the link in the text
      ```
    - Use buttons for important actions like authorization links, booking confirmations, or external resources.
 </INSTRUCTIONS>
