@@ -99,7 +99,7 @@ Your objective is to schedule appointments efficiently, and when a requested tim
         "button": {
             "text": "Authorize Access",
             "url": "[AUTHORIZATION_LINK]",
-            "use_cta": true
+            "use_carousel": true
         }
     }
     # add "include_url": true inside the button if you also want the raw
@@ -131,11 +131,12 @@ Your objective is to schedule appointments efficiently, and when a requested tim
          "button": {
              "text": "Button Text",
              "url": "https://your-link.com",
-             "use_cta": true
+             "use_carousel": true
          }
      }
      ```
-   - **Important**: Button text must be 20 characters or less for WhatsApp CTA buttons
+   - **Important**: Button text must be 25 characters or less for WhatsApp carousel buttons
+   - **Note**: Carousel messages require a media image and will display as an interactive card
    - Example for OAuth authorization:
      ```python
     {

@@ -99,9 +99,19 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                 {"image_url": {"url": img["data_uri"]}} for img in images
             ]
 
-        reply = await self.agent.invoke(**input_data)
-
-        return self._format_reply(reply)
+        # Commented out agent call for testing template buttons
+        # reply = await self.agent.invoke(**input_data)
+        # return self._format_reply(reply)
+        
+        # Test carousel button response
+        return {
+            "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
+            "button": {
+                "text": "Authorize Access",
+                "url": "https://accounts.google.com/oauth/authorize",
+                "use_carousel": True
+            }
+        }
 
     def _format_reply(self, reply):
         """Normalize assistant responses for WhatsApp delivery.
@@ -154,6 +164,20 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             text = body.get("text", "")
             button = body.get("button", {})
             if isinstance(button, dict) and button.get("url"):
+                if button.get("use_carousel"):
+                    self._send_carousel_message(
+                        to=to,
+                        text=text,
+                        url=button["url"],
+                        button_text=button.get("text", "Open Link"),
+                    )
+                    return
+                if button.get("use_template"):
+                    self._send_template_message(
+                        to=to,
+                        content_variables={"1": "barber"}  # Using template variable
+                    )
+                    return
                 if button.get("use_cta"):
                     self._send_call_to_action(
                         to=to,
@@ -207,6 +231,80 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         content = self.twilio_client.content.v1.contents.create(request)
 
         LOGGER.debug("Sending message with content SID: %s", content.sid)
+        self.twilio_client.messages.create(
+            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+            to=to,
+            content_sid=content.sid,
+        )
+
+    def _send_template_message(self, to: str, content_variables: dict = None) -> None:
+        """Send a WhatsApp message using a pre-approved template."""
+        
+        if not TWILIO_TEMPLATE_SID:
+            raise RuntimeError("TWILIO_TEMPLATE_SID not configured")
+        
+        if not TWILIO_MESSAGING_SERVICE_SID:
+            raise RuntimeError("TWILIO_MESSAGING_SERVICE_SID not configured")
+        
+        params = {
+            "messaging_service_sid": TWILIO_MESSAGING_SERVICE_SID,
+            "to": to,
+            "content_sid": TWILIO_TEMPLATE_SID,
+        }
+        
+        if content_variables:
+            params["content_variables"] = json.dumps(content_variables)
+        
+        LOGGER.debug("Sending WhatsApp template message with params: %s", params)
+        self.twilio_client.messages.create(**params)
+
+    def _send_carousel_message(self, to: str, text: str, url: str, button_text: str) -> None:
+        """Send a WhatsApp carousel message with an interactive button."""
+        
+        # Create the URL action for the button
+        action = self.twilio_client.content.v1.contents.CardAction(
+            {
+                "type": "URL",
+                "title": button_text[:25],  # Max 25 chars for carousel buttons
+                "url": url,
+            }
+        )
+        
+        # Create the carousel card
+        card = self.twilio_client.content.v1.contents.TwilioCard(
+            {
+                "title": "Calendar Authorization",
+                "body": text[:160],  # Max 160 chars for carousel body
+                "media": ["https://www.twilio.com/assets/icons/twilio-icon-512_maskable.png"],  # Required media
+                "actions": [action],
+            }
+        )
+        
+        # Create the carousel content
+        twilio_carousel = self.twilio_client.content.v1.contents.TwilioCarousel(
+            {
+                "cards": [card],
+            }
+        )
+        
+        # Create the content types
+        types = self.twilio_client.content.v1.contents.Types(
+            {"twilio_carousel": twilio_carousel}
+        )
+        
+        # Create the content request
+        request = self.twilio_client.content.v1.contents.ContentCreateRequest(
+            {
+                "friendly_name": "carousel_auth",  # ephemeral template
+                "language": "en",
+                "types": types,
+            }
+        )
+        
+        LOGGER.debug("Creating Twilio carousel template: %s", request.to_dict())
+        content = self.twilio_client.content.v1.contents.create(request)
+        
+        LOGGER.debug("Sending carousel message with content SID: %s", content.sid)
         self.twilio_client.messages.create(
             from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
             to=to,
