@@ -52,34 +52,38 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
 
     def send_carousel(self, to: str) -> None:
         """Send a simple one-card carousel with a booking button."""
-        content = self.client.content.v1.contents.create(
-            friendly_name="barber_booking",
-            language="en",
-            types=[
-                {
-                    "type": "twilio/carousel",
-                    "cards": [
-                        {
-                            "title": "Book your appointment",
-                            "body": "Choose your slot on our website",
-                            "actions": [
-                                {
-                                    "type": "link",
-                                    "label": "Book now",
-                                    "url": "https://example.com/booking",
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ],
-        )
+        try:
+            content = self.client.content.v1.contents.create(
+                friendly_name="barber_booking",
+                language="en",
+                types=[
+                    {
+                        "type": "twilio/carousel",
+                        "cards": [
+                            {
+                                "title": "Book your appointment",
+                                "body": "Choose your slot on our website",
+                                "actions": [
+                                    {
+                                        "type": "link",
+                                        "label": "Book now",
+                                        "url": "https://example.com/booking",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            )
 
-        self.client.messages.create(
-            from_=self.from_number,
-            to=to,
-            content_sid=content.sid,
-        )
+            self.client.messages.create(
+                from_=self.from_number,
+                to=to,
+                content_sid=content.sid,
+            )
+        except Exception as err:
+            LOGGER.error("Failed to send carousel: %s", err, exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to send booking carousel")
 
     async def handle_message(self, request: Request) -> str:
         form = await request.form()
