@@ -4,9 +4,14 @@ from abc import ABC, abstractmethod
 
 from fastapi import Request, HTTPException
 from twilio.twiml.messaging_response import MessagingResponse
+from twilio.rest import Client
 
 from src.langgraph_whatsapp.agent import Agent
-from src.langgraph_whatsapp.config import TWILIO_AUTH_TOKEN, TWILIO_ACCOUNT_SID
+from src.langgraph_whatsapp.config import (
+    TWILIO_AUTH_TOKEN,
+    TWILIO_ACCOUNT_SID,
+    TWILIO_WHATSAPP_NUMBER,
+)
 
 LOGGER = logging.getLogger("whatsapp")
 
@@ -39,9 +44,42 @@ class WhatsAppAgent(ABC):
 
 class WhatsAppAgentTwilio(WhatsAppAgent):
     def __init__(self) -> None:
-        if not (TWILIO_AUTH_TOKEN and TWILIO_ACCOUNT_SID):
+        if not (TWILIO_AUTH_TOKEN and TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_NUMBER):
             raise ValueError("Twilio credentials are not configured")
         self.agent = Agent()
+        self.client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        self.from_number = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
+
+    def send_carousel(self, to: str) -> None:
+        """Send a simple one-card carousel with a booking button."""
+        content = self.client.content.v1.contents.create(
+            friendly_name="barber_booking",
+            language="en",
+            types=[
+                {
+                    "type": "twilio/carousel",
+                    "cards": [
+                        {
+                            "title": "Book your appointment",
+                            "body": "Choose your slot on our website",
+                            "actions": [
+                                {
+                                    "type": "link",
+                                    "label": "Book now",
+                                    "url": "https://example.com/booking",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        )
+
+        self.client.messages.create(
+            from_=self.from_number,
+            to=to,
+            content_sid=content.sid,
+        )
 
     async def handle_message(self, request: Request) -> str:
         form = await request.form()
@@ -50,6 +88,13 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         content = form.get("Body", "").strip()
         if not sender:
             raise HTTPException(400, detail="Missing 'From' in request form")
+
+        # Send carousel when the user explicitly requests booking options
+        if content.lower() == "book":
+            self.send_carousel(sender)
+            twiml = MessagingResponse()
+            twiml.message("We've sent you our booking options")
+            return str(twiml)
 
         # Collect ALL images (you'll forward only the first one for now)
         images = []
