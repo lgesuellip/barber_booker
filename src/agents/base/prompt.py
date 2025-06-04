@@ -97,8 +97,9 @@ Your objective is to schedule appointments efficiently, and when a requested tim
     {
         "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
         "button": {
-            "text": "Authorize Calendar Access",
-            "url": "[AUTHORIZATION_LINK]"
+            "text": "Authorize Access",
+            "url": "[AUTHORIZATION_LINK]",
+            "use_cta": true
         }
     }
     # add "include_url": true inside the button if you also want the raw
@@ -129,17 +130,20 @@ Your objective is to schedule appointments efficiently, and when a requested tim
          "text": "Your message here",
          "button": {
              "text": "Button Text",
-             "url": "https://your-link.com"
+             "url": "https://your-link.com",
+             "use_cta": true
          }
      }
      ```
+   - **Important**: Button text must be 20 characters or less for WhatsApp CTA buttons
    - Example for OAuth authorization:
      ```python
     {
         "text": "Hi! I need you to authorize access to the calendar system. Please click below to authorize:",
         "button": {
-            "text": "Authorize Calendar Access",
-            "url": "[AUTHORIZATION_LINK]"
+            "text": "Authorize Access",
+            "url": "[AUTHORIZATION_LINK]",
+            "use_cta": true
         }
     }
     # add "include_url": true in the button to repeat the link in the text
