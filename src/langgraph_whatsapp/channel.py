@@ -99,7 +99,15 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                 {"image_url": {"url": img["data_uri"]}} for img in images
             ]
 
-        reply = await self.agent.invoke(**input_data)
+        # NOTE: Hardcoded reply for button testing. The agent call is disabled.
+        # reply = await self.agent.invoke(**input_data)
+        reply = {
+            "text": "Open Google",
+            "button": {
+                "url": "https://www.google.com",
+                "text": "Go to Google"
+            }
+        }
 
         return self._format_reply(reply)
 
