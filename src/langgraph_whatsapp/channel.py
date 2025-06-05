@@ -99,19 +99,9 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                 {"image_url": {"url": img["data_uri"]}} for img in images
             ]
 
-        # Commented out agent call for testing template buttons
-        # reply = await self.agent.invoke(**input_data)
-        # return self._format_reply(reply)
-        
-        # Test carousel button response
-        return {
-            "text": "Hi! I need you to authorize access to the calendar system to book your appointment. Please click the button below to authorize. Once you've completed the authorization, just let me know and I'll book your appointment right away! 📅",
-            "button": {
-                "text": "Authorize Access",
-                "url": "https://accounts.google.com/oauth/authorize",
-                "use_carousel": True
-            }
-        }
+        # Invoke the agent to process the message
+        reply = await self.agent.invoke(**input_data)
+        return self._format_reply(reply)
 
     def _format_reply(self, reply):
         """Normalize assistant responses for WhatsApp delivery.
@@ -164,12 +154,12 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             text = body.get("text", "")
             button = body.get("button", {})
             if isinstance(button, dict) and button.get("url"):
-                # Always use carousel for buttons
-                self._send_carousel_message(
+                # Use template message for auth buttons
+                self._send_template_message(
                     to=to,
                     text=text,
                     url=button["url"],
-                    button_text=button.get("text", "Open Link"),
+                    template_sid="HX8203e2ad9ade23ede0b373fefdcee1eb",
                 )
                 return
             params["body"] = text
@@ -179,6 +169,26 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         LOGGER.debug("Sending WhatsApp message with params: %s", params)
         self.twilio_client.messages.create(**params)
 
+    def _send_template_message(self, to: str, text: str, url: str, template_sid: str) -> None:
+        """Send a WhatsApp message using a pre-approved template with variables."""
+        
+        LOGGER.debug(f"Sending template message with SID: {template_sid}")
+        
+        # Create the content variables for the template
+        content_variables = {
+            "1": text,  # {{reply_text}}
+            "2": url,   # {{auth_link}}
+        }
+        
+        params = {
+            "from_": f"whatsapp:{TWILIO_PHONE_NUMBER}",
+            "to": to,
+            "content_sid": template_sid,
+            "content_variables": json.dumps(content_variables),
+        }
+        
+        LOGGER.debug("Sending WhatsApp template message with params: %s", params)
+        self.twilio_client.messages.create(**params)
 
     def _send_carousel_message(self, to: str, text: str, url: str, button_text: str) -> None:
         """Send a WhatsApp carousel message with an interactive button."""
