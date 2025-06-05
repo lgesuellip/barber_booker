@@ -56,42 +56,27 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
     def send_carousel(self, to: str) -> None:
         """Send a simple one-card carousel with a booking button."""
         try:
-            # Build a ContentCreateRequest payload according to the new Twilio
-            # Content API. The API expects a dataclass instance instead of
-            # keyword arguments.
-            payload = self.client.content.v1.contents.ContentCreateRequest(
-                {
-                    "friendly_name": "barber_booking",
-                    "language": "en",
-                    "types": self.client.content.v1.contents.Types(
-                        {
-                            "twilio_carousel": self.client.content.v1.contents.TwilioCarousel(
-                                {
-                                    "cards": [
-                                        self.client.content.v1.contents.CarouselCard(
-                                            {
-                                                "title": "Book your appointment",
-                                                "body": "Choose your slot on our website",
-                                                "actions": [
-                                                    self.client.content.v1.contents.CarouselAction(
-                                                        {
-                                                            "type": ContentInstance.CarouselActionType.URL,
-                                                            "title": "Book now",
-                                                            "url": "https://example.com/booking",
-                                                        }
-                                                    )
-                                                ],
-                                            }
-                                        )
-                                    ],
-                                }
-                            )
-                        }
-                    ),
-                }
+            content = self.client.content.v1.contents.create(
+                friendly_name="barber_booking",
+                language="en",
+                types={
+                    "twilio/carousel": {
+                        "cards": [
+                            {
+                                "title": "Book your appointment",
+                                "body": "Choose your slot on our website",
+                                "actions": [
+                                    {
+                                        "type": "link",
+                                        "label": "Book now",
+                                        "url": "https://example.com/booking",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                },
             )
-
-            content = self.client.content.v1.contents.create(payload)
 
             self.client.messages.create(
                 from_=self.from_number,
