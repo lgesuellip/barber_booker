@@ -205,10 +205,10 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         
         try:
             # Create the content variables for the template
-            # Twilio expects numeric keys for content variables
+            # Using the exact variable names from your template
             content_variables = {
-                "1": text,  # {{1}} maps to reply_text in your template
-                "2": url,   # {{2}} maps to auth_link in your template
+                "reply_text": text,
+                "auth_link": url,
             }
             
             params = {
