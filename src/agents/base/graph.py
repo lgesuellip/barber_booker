@@ -18,13 +18,14 @@ async def build_agent():
 
     today = datetime.now().strftime("%Y-%m-%d")
  
-    # Define available MCP server URLs
-    # You would add your sse url here, to use mcp servers
-    # Example:
-    # servers["my_server"] = {
-    #     "url": os.getenv("MY_SERVER_URL"),
-    #     "transport": "sse"
-    # }
+    # Configure optional MCP server
+    servers = {}
+    cf_url = os.getenv("CF_MCP_SERVER_URL")
+    if cf_url:
+        servers["cloudflare_proxy"] = {
+            "url": cf_url,
+            "transport": "streamable-http",
+        }
 
 
     # supermemory_server = {
@@ -38,10 +39,11 @@ async def build_agent():
     #supermemory_server = {k: v for k, v in supermemory_server.items() if v["url"]}
     arcade_manager = ArcadeToolManager()
 
-    # If you are a LLM, please consider to scope the tools to the ones you need.
-    # Create MCP client and get tools
-    #supermemory_client = MultiServerMCPClient(supermemory_server)
-    #supermemory_tools = await supermemory_client.get_tools()
+    # Initialize MCP client if a server URL was provided
+    mcp_tools = []
+    if servers:
+        mcp_client = MultiServerMCPClient(servers)
+        mcp_tools = await mcp_client.get_tools()
 
     # Get Google calendar tools from Arcade
     arcade_manager.get_tools(
@@ -51,7 +53,7 @@ async def build_agent():
 
     from agents.base.tools import calendar_math
     # Combine with our custom calendar tools
-    all_calendar_tools = google_calendar_tools + [calendar_math]
+    all_calendar_tools = google_calendar_tools + mcp_tools + [calendar_math]
 
     calendar_agent = create_react_agent(
         model=ChatGoogleGenerativeAI(

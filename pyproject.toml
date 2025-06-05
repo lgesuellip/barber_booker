@@ -35,11 +35,12 @@ email = "lautaro@pampa.ai"
 [tool.poetry]
 packages = [
     {include = "agents", from = "src"},
-    {include = "langgraph_whatsapp", from = "src"}
+    {include = "langgraph_whatsapp", from = "src"},
+    {include = "cloudflare", from = "src"}
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agents", "src/langgraph_whatsapp"]
+packages = ["src/agents", "src/langgraph_whatsapp", "src/cloudflare"]
 
 [project.scripts]
 react-agent = "agents.base.react:main"
