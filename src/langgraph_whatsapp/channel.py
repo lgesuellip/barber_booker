@@ -187,7 +187,7 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                     to=to,
                     text=text,
                     url=button["url"],
-                    template_sid="HX8203e2ad9ade23ede0b373fefdcee1eb",
+                    template_sid="HXc2abe9968746afb615cd602f8d85b6a5",
                 )
                 return
             params["body"] = text
@@ -207,7 +207,7 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             # Create the content variables for the template
             # Using the exact variable names from your template
             content_variables = {
-                "reply_text": text,
+                "auth_text": text,
                 "auth_link": url,
             }
             
