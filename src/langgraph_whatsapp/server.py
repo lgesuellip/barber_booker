@@ -72,7 +72,7 @@ async def whatsapp_reply_twilio(request: Request, background_tasks: BackgroundTa
         background_tasks.add_task(_process)
 
         resp = MessagingResponse()
-        resp.message("Processing your request. You will receive a reply shortly.")
+        resp.message("")
         return Response(content=str(resp), media_type="application/xml")
     except HTTPException as e:
         LOGGER.error("Handled error: %s", e.detail)
