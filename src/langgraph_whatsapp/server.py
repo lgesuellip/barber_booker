@@ -59,8 +59,15 @@ async def whatsapp_reply_twilio(request: Request, background_tasks: BackgroundTa
         form = await request.form()
 
         async def _process():
-            message = await WSP_AGENT.process_form(form)
-            WSP_AGENT.send_whatsapp_message(form.get("From", "").strip(), message)
+            try:
+                LOGGER.info("Starting background run")
+                message = await WSP_AGENT.process_form(form)
+                LOGGER.info(f"Background run succeeded")
+                WSP_AGENT.send_whatsapp_message(form.get("From", "").strip(), message)
+            except Exception as e:
+                LOGGER.error(f"Exception in background task: {str(e)}")
+                LOGGER.exception("Full traceback:")
+                raise
 
         background_tasks.add_task(_process)
 

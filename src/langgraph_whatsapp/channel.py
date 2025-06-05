@@ -113,23 +113,23 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         be extracted correctly. Otherwise convert the reply to a plain string.
         """
 
-        LOGGER.debug("Formatting reply: %s", reply)
+        LOGGER.info(f"Formatting reply - Type: {type(reply)}, Content: {reply}")
 
         if isinstance(reply, dict) and "text" in reply and "button" in reply:
-            LOGGER.debug("Reply already formatted with button")
+            LOGGER.info("Reply already formatted with button")
             return reply
 
         if isinstance(reply, str):
             try:
                 parsed = json.loads(reply)
                 if isinstance(parsed, dict) and "text" in parsed and "button" in parsed:
-                    LOGGER.debug("Parsed JSON reply successfully")
+                    LOGGER.info("Parsed JSON reply successfully as button message")
                     return parsed
             except json.JSONDecodeError:
-                LOGGER.debug("Failed to parse reply as JSON")
+                LOGGER.debug("Reply is not JSON, treating as plain text")
                 pass
 
-        LOGGER.debug("Returning plain string reply")
+        LOGGER.info("Returning plain string reply")
         return str(reply)
 
     def send_whatsapp_message(self, to: str, body: str | dict) -> None:
@@ -145,6 +145,8 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         if not TWILIO_PHONE_NUMBER:
             raise RuntimeError("TWILIO_PHONE_NUMBER not configured")
 
+        LOGGER.info(f"send_whatsapp_message called - to: {to}, body type: {type(body)}, body: {body}")
+
         params = {
             "from_": f"whatsapp:{TWILIO_PHONE_NUMBER}",
             "to": to,
@@ -153,7 +155,9 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         if isinstance(body, dict):
             text = body.get("text", "")
             button = body.get("button", {})
+            LOGGER.info(f"Dict body - text: {text}, button: {button}")
             if isinstance(button, dict) and button.get("url"):
+                LOGGER.info(f"Sending template message for auth button")
                 # Use template message for auth buttons
                 self._send_template_message(
                     to=to,
@@ -166,29 +170,42 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
         else:
             params["body"] = body
 
-        LOGGER.debug("Sending WhatsApp message with params: %s", params)
+        LOGGER.info("Sending regular WhatsApp message with params: %s", params)
         self.twilio_client.messages.create(**params)
 
     def _send_template_message(self, to: str, text: str, url: str, template_sid: str) -> None:
         """Send a WhatsApp message using a pre-approved template with variables."""
         
-        LOGGER.debug(f"Sending template message with SID: {template_sid}")
+        LOGGER.info(f"Sending template message with SID: {template_sid}")
+        LOGGER.info(f"Template variables - reply_text: {text}, auth_link: {url}")
         
-        # Create the content variables for the template
-        content_variables = {
-            "1": text,  # {{reply_text}}
-            "2": url,   # {{auth_link}}
-        }
-        
-        params = {
-            "from_": f"whatsapp:{TWILIO_PHONE_NUMBER}",
-            "to": to,
-            "content_sid": template_sid,
-            "content_variables": json.dumps(content_variables),
-        }
-        
-        LOGGER.debug("Sending WhatsApp template message with params: %s", params)
-        self.twilio_client.messages.create(**params)
+        try:
+            # Create the content variables for the template
+            # Twilio expects numeric keys for content variables
+            content_variables = {
+                "1": text,  # {{1}} maps to reply_text in your template
+                "2": url,   # {{2}} maps to auth_link in your template
+            }
+            
+            params = {
+                "from_": f"whatsapp:{TWILIO_PHONE_NUMBER}",
+                "to": to,
+                "content_sid": template_sid,
+                "content_variables": json.dumps(content_variables),
+            }
+            
+            LOGGER.info("Sending WhatsApp template message with params: %s", params)
+            message = self.twilio_client.messages.create(**params)
+            LOGGER.info(f"Template message sent successfully: {message.sid}")
+        except Exception as e:
+            LOGGER.error(f"Failed to send template message: {str(e)}")
+            # Fall back to regular text message
+            LOGGER.info("Falling back to regular text message")
+            self.twilio_client.messages.create(
+                from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+                to=to,
+                body=f"{text}\n\nAuthorization link: {url}"
+            )
 
     def _send_carousel_message(self, to: str, text: str, url: str, button_text: str) -> None:
         """Send a WhatsApp carousel message with an interactive button."""
