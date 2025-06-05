@@ -190,6 +190,10 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
     def _send_template_message(self, to: str, text: str, url: str, template_sid: str) -> None:
         """Send a WhatsApp message using a pre-approved template with variables."""
         
+        # Remove https:// prefix if present
+        if url.startswith("https://"):
+            url = url[8:]
+        
         LOGGER.info(f"Sending template message with SID: {template_sid}")
         LOGGER.info(f"Template variables - reply_text: {text}, auth_link: {url}")
         
