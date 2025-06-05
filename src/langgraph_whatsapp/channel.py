@@ -99,9 +99,18 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
                 {"image_url": {"url": img["data_uri"]}} for img in images
             ]
 
-        # Invoke the agent to process the message
-        reply = await self.agent.invoke(**input_data)
-        return self._format_reply(reply)
+        # Commented out agent call for testing template
+        # reply = await self.agent.invoke(**input_data)
+        # return self._format_reply(reply)
+        
+        # Hardcoded button example using template
+        return {
+            "text": "Hi! Please click the button below to continue with the authorization process.",
+            "button": {
+                "text": "Authorize",
+                "url": "https://google.com"
+            }
+        }
 
     def _format_reply(self, reply):
         """Normalize assistant responses for WhatsApp delivery.
@@ -120,10 +129,25 @@ class WhatsAppAgentTwilio(WhatsAppAgent):
             return reply
 
         if isinstance(reply, str):
+            # Check if the string contains a JSON object with button
+            # First try to find JSON in the string
+            if '{\n    "text":' in reply and '"button":' in reply:
+                try:
+                    # Extract JSON from the string
+                    json_start = reply.find('{\n    "text":')
+                    json_str = reply[json_start:]
+                    parsed = json.loads(json_str)
+                    if isinstance(parsed, dict) and "text" in parsed and "button" in parsed:
+                        LOGGER.info("Extracted and parsed JSON reply successfully as button message")
+                        return parsed
+                except json.JSONDecodeError as e:
+                    LOGGER.error(f"Failed to parse extracted JSON: {e}")
+            
+            # Try parsing the whole string as JSON
             try:
                 parsed = json.loads(reply)
                 if isinstance(parsed, dict) and "text" in parsed and "button" in parsed:
-                    LOGGER.info("Parsed JSON reply successfully as button message")
+                    LOGGER.info("Parsed entire reply as JSON button message")
                     return parsed
             except json.JSONDecodeError:
                 LOGGER.debug("Reply is not JSON, treating as plain text")
