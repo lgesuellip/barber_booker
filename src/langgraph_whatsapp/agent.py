@@ -61,7 +61,7 @@ class Agent:
                     ]
                 },
                 "config":{
-                    "user_id": config.ARCADE_USER_ID,
+                    "user_id": id,
                 },
                 "metadata": {"event": "api_call"},
                 "multitask_strategy": "interrupt",
